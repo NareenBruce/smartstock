@@ -2,6 +2,7 @@
 import { useState, useRef } from 'react'
 import axios from 'axios'
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, BarChart, Bar, Legend } from 'recharts'
+import UserProfile from './UserProfile.jsx'
 import './App.css'
 
 
@@ -47,11 +48,11 @@ function App() {
 
     setLoading(true)
     setResults(null)
-    
+
     // Fake the multi-step "Thinking" animation for the judges
     for (let i = 0; i < loadingMessages.length; i++) {
       setLoadingStep(loadingMessages[i])
-      await new Promise(r => setTimeout(r, 600)) 
+      await new Promise(r => setTimeout(r, 600))
     }
 
     try {
@@ -59,23 +60,26 @@ function App() {
       // 2. Upload the CSV to SQLite first
       const formData = new FormData()
       formData.append('file', file)
-      await axios.post('https://smartstockbend.nareenbruce.tech/api/v1/upload-sales', formData, {
+      await axios.post('http://localhost:8000/api/v1/upload-sales', formData, {
         headers: { 'Content-Type': 'multipart/form-data' }
       })
       // -------------------------------------
 
       // 3. Ask the AI to reason about the newly uploaded data
-      const enhancedContext = `${contextNote}. Expected foot traffic drop: ${trafficDrop}%.`
+      const enhancedContext = `Optimization Goal: ${optGoal}. AI Risk Tolerance: ${riskTolerance}/100. ${contextNote}. Expected foot traffic drop: ${trafficDrop}%.`
       const analyzeResponse = await axios.post(
-        `https://smartstockbend.nareenbruce.tech/api/v1/analyze-inventory?context_notes=${encodeURIComponent(enhancedContext)}`
+        `http://localhost:8000/api/v1/analyze-inventory?context_notes=${encodeURIComponent(enhancedContext)}&token_limit=${tokenLimit}`
       )
-      
+
       const data = analyzeResponse.data
-      data.riskLevel = trafficDrop > 40 ? 85 : 35 
       setResults(data)
     } catch (err) {
       console.error(err)
-      alert("Error connecting to server. Check your backend terminal.")
+      if (err.response && err.response.data && err.response.data.detail) {
+        alert("Backend Error: " + err.response.data.detail)
+      } else {
+        alert("Error connecting to server. Check your backend terminal.")
+      }
     } finally {
       setLoading(false)
     }
@@ -103,41 +107,64 @@ function App() {
       {/* Dynamic Sidebar */}
       <aside className="sidebar">
         <div className="brand-title">SmartStock AI</div>
-        <div 
+        <div
           className={`nav-item ${activeTab === 'engine' ? 'active' : ''}`}
           onClick={() => setActiveTab('engine')}
         >
-          🧠 Decision Engine
+          <svg width="18" height="18" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24" style={{ marginRight: '8px', verticalAlign: 'middle' }}>
+            <path strokeLinecap="round" strokeLinejoin="round" d="M13 10V3L4 14h7v7l9-11h-7z" />
+          </svg>
+          Decision Engine
         </div>
-        <div 
-  className={`nav-item ${activeTab === 'trends' ? 'active' : ''}`}
-  onClick={async () => {
-    setActiveTab('trends')
-    try {
-      const response = await axios.get('https://smartstockbend.nareenbruce.tech/api/v1/trends')
-      if (response.data.length > 0) {
-        setTrendData(response.data)
-      }
-    } catch (error) {
-      console.error("Error fetching trend data:", error)
-    }
-  }}
->
-  📊 Predictive Trends
-</div>
-        <div 
+        <div
+          className={`nav-item ${activeTab === 'trends' ? 'active' : ''}`}
+          onClick={async () => {
+            setActiveTab('trends')
+            try {
+              const response = await axios.get('http://localhost:8000/api/v1/trends')
+              if (response.data.length > 0) {
+                setTrendData(response.data)
+              }
+            } catch (error) {
+              console.error("Error fetching trend data:", error)
+            }
+          }}
+        >
+          <svg width="18" height="18" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24" style={{ marginRight: '8px', verticalAlign: 'middle' }}>
+            <path strokeLinecap="round" strokeLinejoin="round" d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6" />
+          </svg>
+          Predictive Trends
+        </div>
+        <div
           className={`nav-item ${activeTab === 'tuning' ? 'active' : ''}`}
           onClick={() => setActiveTab('tuning')}
         >
-          ⚙️ Model Tuning
+          <svg width="18" height="18" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24" style={{ marginRight: '8px', verticalAlign: 'middle' }}>
+            <path strokeLinecap="round" strokeLinejoin="round" d="M12 6V4m0 2a2 2 0 100 4m0-4a2 2 0 110 4m-6 8a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4m6 6v10m6-2a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4" />
+          </svg>
+          Model Tuning
+        </div>
+        <div
+          className={`nav-item nav-bottom-item ${activeTab === 'profile' ? 'active' : ''}`}
+          onClick={() => setActiveTab('profile')}
+        >
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+            <img src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='%2394a3b8'%3E%3Cpath d='M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z'/%3E%3C/svg%3E" alt="Avatar" style={{ width: '28px', height: '28px', borderRadius: '50%', backgroundColor: '#1e293b', border: '1px solid rgba(255,255,255,0.2)' }} />
+            <span>My Profile</span>
+          </div>
         </div>
       </aside>
 
       {/* Main Content Area */}
       <main className="main-content">
         <header className="header">
-          <h1>{activeTab === 'engine' ? 'Intelligence Workspace' : 'Data Analytics & Forecasting'}</h1>
-          <p>Powered by Z.AI General Language Model</p>
+          <h1>
+            {activeTab === 'engine' && 'Intelligence Workspace'}
+            {activeTab === 'trends' && 'Data Analytics & Forecasting'}
+            {activeTab === 'tuning' && 'Model Configuration'}
+            {activeTab === 'profile' && 'User Profile'}
+          </h1>
+          <p>{activeTab === 'profile' ? 'Manage your account details and view statistics' : 'Powered by Z.AI General Language Model'}</p>
         </header>
 
         {/* ------------------------------------------------------------------------ */}
@@ -179,7 +206,7 @@ function App() {
               {results && (
                 <div className="results-animate-in">
                   <div className="badge-row">
-                    <span className="badge">✓ Confidence: 89%</span>
+                    <span className="badge">✓ Confidence: {results.confidence_score || 89}%</span>
                     <span className="badge">↻ Live API Sync</span>
                   </div>
                   <div className="action-highlight">
@@ -218,19 +245,19 @@ function App() {
                   <AreaChart data={trendData} margin={{ top: 10, right: 30, left: 0, bottom: 0 }}>
                     <defs>
                       <linearGradient id="colorSales" x1="0" y1="0" x2="0" y2="1">
-                        <stop offset="5%" stopColor="#3b82f6" stopOpacity={0.3}/>
-                        <stop offset="95%" stopColor="#3b82f6" stopOpacity={0}/>
+                        <stop offset="5%" stopColor="#3b82f6" stopOpacity={0.3} />
+                        <stop offset="95%" stopColor="#3b82f6" stopOpacity={0} />
                       </linearGradient>
                       <linearGradient id="colorDemand" x1="0" y1="0" x2="0" y2="1">
-                        <stop offset="5%" stopColor="#10b981" stopOpacity={0.3}/>
-                        <stop offset="95%" stopColor="#10b981" stopOpacity={0}/>
+                        <stop offset="5%" stopColor="#10b981" stopOpacity={0.3} />
+                        <stop offset="95%" stopColor="#10b981" stopOpacity={0} />
                       </linearGradient>
                     </defs>
                     <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.05)" />
                     <XAxis dataKey="day" stroke="#94a3b8" />
                     <YAxis stroke="#94a3b8" />
                     <Tooltip content={<CustomTooltip />} />
-                    <Legend verticalAlign="top" height={36}/>
+                    <Legend verticalAlign="top" height={36} />
                     <Area type="monotone" dataKey="historicalSales" name="Historical Sales" stroke="#3b82f6" fillOpacity={1} fill="url(#colorSales)" />
                     <Area type="monotone" dataKey="predictedDemand" name="AI Predicted Demand" stroke="#10b981" fillOpacity={1} fill="url(#colorDemand)" />
                   </AreaChart>
@@ -246,7 +273,7 @@ function App() {
                     <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.05)" vertical={false} />
                     <XAxis dataKey="day" stroke="#94a3b8" />
                     <YAxis stroke="#94a3b8" />
-                    <Tooltip content={<CustomTooltip />} cursor={{fill: 'rgba(255,255,255,0.05)'}}/>
+                    <Tooltip content={<CustomTooltip />} cursor={{ fill: 'rgba(255,255,255,0.05)' }} />
                     <Bar dataKey="spoilageRisk" name="Spoilage Risk (%)" fill="#f43f5e" radius={[4, 4, 0, 0]} />
                   </BarChart>
                 </ResponsiveContainer>
@@ -271,9 +298,9 @@ function App() {
 
               <div style={{ marginBottom: '2rem' }}>
                 <h3 style={{ fontSize: '1rem', color: '#60a5fa', marginBottom: '1rem' }}>Reasoning Parameters</h3>
-                
+
                 <label>Primary Optimization Vector</label>
-                <select 
+                <select
                   style={{ width: '100%', background: '#0f172a', border: '1px solid #334155', color: '#fff', padding: '0.85rem', borderRadius: '8px', marginBottom: '1.5rem', fontSize: '1rem' }}
                   value={optGoal}
                   onChange={(e) => setOptGoal(e.target.value)}
@@ -293,10 +320,10 @@ function App() {
               <div style={{ marginBottom: '2rem' }}>
                 <h3 style={{ fontSize: '1rem', color: '#60a5fa', marginBottom: '1rem' }}>System Constraints</h3>
                 <label>Max Context Token Limit (Safeguard)</label>
-                <input 
-                  type="number" 
-                  value={tokenLimit} 
-                  onChange={(e) => setTokenLimit(e.target.value)} 
+                <input
+                  type="number"
+                  value={tokenLimit}
+                  onChange={(e) => setTokenLimit(e.target.value)}
                   style={{ width: '100%', background: '#0f172a', border: '1px solid #334155', color: '#fff', padding: '0.85rem', borderRadius: '8px', marginBottom: '1rem', fontSize: '1rem' }}
                 />
               </div>
@@ -312,6 +339,13 @@ function App() {
               )}
             </div>
           </div>
+        )}
+
+        {/* ------------------------------------------------------------------------ */}
+        {/* VIEW 4: USER PROFILE                                                       */}
+        {/* ------------------------------------------------------------------------ */}
+        {activeTab === 'profile' && (
+          <UserProfile />
         )}
 
       </main>

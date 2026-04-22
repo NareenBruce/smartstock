@@ -1,0 +1,172 @@
+/* frontend/src/App.css */
+@import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&display=swap');
+
+* { box-sizing: border-box; margin: 0; padding: 0; font-family: 'DM Sans', sans-serif; }
+
+/* 1. Global Viewport Lock - NO PAGE SCROLLING */
+html, body, #root {
+  width: 100vw;
+  height: 100vh;
+  overflow: hidden; 
+  background-color: #050505;
+  background-image: radial-gradient(circle at top right, rgba(29, 78, 216, 0.1), transparent 40%),
+                    radial-gradient(circle at bottom left, rgba(16, 185, 129, 0.08), transparent 40%);
+  color: #e2e8f0;
+}
+
+/* 2. Main Layout Flexbox */
+.dashboard-layout { 
+  display: flex; 
+  height: 100vh; 
+  width: 100vw; 
+}
+
+/* 3. Slimmer SaaS Sidebar (Reduced by ~35%) */
+.sidebar {
+  width: 240px; /* Slim, optimized width */
+  flex-shrink: 0;
+  background: rgba(10, 10, 10, 0.8);
+  backdrop-filter: blur(20px);
+  border-right: 1px solid rgba(255, 255, 255, 0.05);
+  padding: 1.5rem 1.25rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.brand-title {
+  background: linear-gradient(90deg, #60a5fa, #a78bfa);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  font-size: 1.4rem;
+  font-weight: 800;
+  margin-bottom: 2rem;
+  padding-left: 0.5rem;
+}
+
+.nav-item { padding: 0.75rem 1rem; color: #94a3b8; border-radius: 8px; cursor: pointer; font-weight: 500; font-size: 0.95rem; transition: all 0.2s ease; }
+.nav-item:hover { background: rgba(255, 255, 255, 0.05); color: #fff; }
+.nav-item.active { background: linear-gradient(90deg, rgba(59, 130, 246, 0.15), transparent); color: #60a5fa; border-left: 3px solid #3b82f6; }
+
+/* 4. Scrollable Content Area */
+.main-content {
+  flex-grow: 1;
+  height: 100vh;
+  overflow-y: auto; /* Allows scrolling ONLY inside this pane */
+  padding: 2.5rem 3.5rem;
+  display: flex;
+  flex-direction: column;
+  gap: 2rem;
+}
+
+/* Custom Scrollbar for Main Content */
+.main-content::-webkit-scrollbar { width: 8px; }
+.main-content::-webkit-scrollbar-track { background: transparent; }
+.main-content::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.1); border-radius: 10px; }
+.main-content::-webkit-scrollbar-thumb:hover { background: rgba(255,255,255,0.2); }
+
+.header h1 { font-size: 2rem; font-weight: 700; color: #fff; }
+.header p { color: #94a3b8; margin-top: 0.25rem; font-size: 1rem; }
+
+.grid-container {
+  display: grid;
+  grid-template-columns: 1fr 1.2fr;
+  gap: 2rem;
+  align-items: start; /* Prevents stretching */
+}
+
+/* Glass Cards */
+.glass-card {
+  background: rgba(15, 23, 42, 0.5);
+  backdrop-filter: blur(12px);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 12px;
+  padding: 2rem;
+  box-shadow: 0 8px 30px rgba(0, 0, 0, 0.15);
+}
+
+.glass-card h2 { font-size: 1.2rem; color: #f8fafc; margin-bottom: 1.5rem; font-weight: 600; border-bottom: 1px solid rgba(255,255,255,0.05); padding-bottom: 0.8rem; }
+
+/* 5. Custom File Button Redesign */
+.file-upload-wrapper { margin-bottom: 1.5rem; }
+.custom-file-btn {
+  width: 100%;
+  padding: 0.85rem;
+  background-color: rgba(37, 99, 235, 0.15);
+  color: #60a5fa;
+  border: 1px dashed #3b82f6;
+  border-radius: 8px;
+  font-weight: 600;
+  font-size: 0.95rem;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.custom-file-btn:hover { background-color: #2563eb; color: white; border-style: solid; }
+.file-name-display { margin-top: 0.6rem; font-size: 0.85rem; color: #10b981; font-weight: 500; }
+
+/* Forms & Sliders */
+label { display: block; font-size: 0.85rem; color: #94a3b8; margin-bottom: 0.5rem; text-transform: uppercase; letter-spacing: 0.5px; font-weight: 600; }
+textarea {
+  width: 100%; background: #0f172a; border: 1px solid #334155; color: #fff;
+  padding: 1rem; border-radius: 8px; margin-bottom: 1.5rem; font-size: 0.95rem; resize: vertical;
+}
+textarea:focus { outline: none; border-color: #3b82f6; }
+
+.slider-container { padding: 1.2rem; background: rgba(0,0,0,0.25); border-radius: 8px; margin-bottom: 2rem; border: 1px solid rgba(255,255,255,0.03); }
+input[type="range"] { width: 100%; cursor: pointer; accent-color: #3b82f6; }
+
+/* Gradient Primary Action Button */
+.action-btn {
+  width: 100%; padding: 1.1rem;
+  background: linear-gradient(135deg, #2563eb, #7c3aed);
+  color: white; border: none; border-radius: 8px; font-weight: 700; font-size: 1.05rem;
+  cursor: pointer; transition: all 0.3s ease; box-shadow: 0 4px 15px rgba(37, 99, 235, 0.2);
+}
+.action-btn:hover:not(:disabled) { transform: translateY(-2px); box-shadow: 0 6px 20px rgba(124, 58, 237, 0.4); }
+.action-btn:disabled { background: #334155; color: #94a3b8; box-shadow: none; cursor: wait; }
+
+/* Results Matrix */
+.badge-row { display: flex; gap: 0.8rem; margin-bottom: 1.5rem; }
+.badge { font-size: 0.8rem; font-weight: 600; padding: 0.3rem 0.8rem; border-radius: 99px; background: rgba(59, 130, 246, 0.1); color: #60a5fa; border: 1px solid rgba(59, 130, 246, 0.2); }
+
+.action-highlight {
+  background: linear-gradient(90deg, rgba(16, 185, 129, 0.1), transparent);
+  border-left: 4px solid #10b981; padding: 1.25rem; border-radius: 0 8px 8px 0; margin-bottom: 1.5rem;
+}
+.action-highlight h3 { color: #10b981; font-size: 0.85rem; text-transform: uppercase; margin-bottom: 0.5rem; }
+.action-highlight p { font-size: 1.15rem; font-weight: 500; color: #fff; line-height: 1.5; }
+
+.decision-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; }
+.mini-card { background: rgba(255, 255, 255, 0.03); border: 1px solid rgba(255, 255, 255, 0.05); padding: 1.25rem; border-radius: 8px; }
+.mini-card h3 { font-size: 0.8rem; color: #94a3b8; text-transform: uppercase; margin-bottom: 0.75rem; letter-spacing: 0.5px; }
+.mini-card p { font-size: 0.95rem; color: #f8fafc; line-height: 1.6; }
+
+.progress-bar-container { width: 100%; background: #1e293b; border-radius: 99px; height: 8px; overflow: hidden; }
+.progress-bar { height: 100%; background: linear-gradient(90deg, #10b981, #f59e0b, #ef4444); transition: width 0.5s ease; }
+
+.diagnostics {
+  font-family: 'SF Mono', Consolas, monospace; font-size: 0.8rem; color: #a78bfa;
+  background-color: rgba(139, 92, 246, 0.1); padding: 0.8rem 1rem; border-radius: 6px;
+  border: 1px solid rgba(139, 92, 246, 0.2); margin-top: 1.5rem;
+}
+
+@keyframes pulse { 0% { opacity: 0.6; } 50% { opacity: 1; } 100% { opacity: 0.6; } }
+.loading-text { color: #a78bfa; font-weight: 500; animation: pulse 1.5s infinite; }
+
+/* 6. Responsiveness */
+@media (max-width: 1024px) {
+  .grid-container { grid-template-columns: 1fr; }
+}
+
+@media (max-width: 768px) {
+  .dashboard-layout { flex-direction: column; }
+  .sidebar { width: 100%; flex-direction: row; padding: 1rem; border-right: none; border-bottom: 1px solid rgba(255,255,255,0.05); overflow-x: auto; }
+  .brand-title { margin-bottom: 0; margin-right: 1.5rem; }
+  .nav-item { padding: 0.5rem 1rem; white-space: nowrap; }
+  .nav-item.active { border-left: none; border-bottom: 2px solid #3b82f6; border-radius: 8px; }
+  .main-content { padding: 1.5rem; }
+  .decision-grid { grid-template-columns: 1fr; }
+}

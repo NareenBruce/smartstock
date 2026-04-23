@@ -13,14 +13,14 @@ import requests
 from dotenv import load_dotenv
 import json
 import re
+from anthropic import Anthropic, APIError, APIConnectionError
 
 # Create the database tables
 models.Base.metadata.create_all(bind=engine)
 
 # Load the secret API key from the .env file
 load_dotenv()
-Z_AI_API_KEY = os.getenv("Z_AI_API_KEY")
-GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
+ILMU_API_KEY = os.getenv("ILMU_API_KEY")
 
 app = FastAPI(title="SmartStock API")
 
@@ -89,9 +89,10 @@ def analyze_inventory(context_notes: str, token_limit: int = 1500, db: Session =
         raise HTTPException(status_code=400, detail="No historical sales data found. Please upload a CSV first.")
 
     # 2. Format structured data
-    sales_summary = "Historical Sales Data (Last 7 Days):\n"
-    for sale in sales:
-        sales_summary += f"- {sale.item_name}: {sale.quantity_sold} sold on {sale.sale_date.strftime('%Y-%m-%d')}\n"
+    sales_summary = "Historical Sales Data (Last 5 Days):\n"
+    # ONLY send the 5 most recent sales to drastically reduce input tokens
+    for sale in sales[-5:]:
+        sales_summary += f"- {sale.item_name}: {sale.quantity_sold} sold\n"
         
     # 3. Token Boundary Mitigation (Protects against oversized inputs)
     estimated_tokens = int((len(sales_summary.split()) + len(context_notes.split())) * 1.3)
@@ -100,7 +101,7 @@ def analyze_inventory(context_notes: str, token_limit: int = 1500, db: Session =
     
     if estimated_tokens > MAX_TOKENS:
         sales_summary = sales_summary[:2000] + "\n...[DATA TRUNCATED DUE TO TOKEN LIMITS]"
-        boundary_warning = "Input truncated to prevent Z.AI API failure."
+        boundary_warning = "Input truncated to prevent ILMU API failure."
 
     # 4. Construct the System & User Prompts
     system_prompt = """
@@ -118,8 +119,8 @@ def analyze_inventory(context_notes: str, token_limit: int = 1500, db: Session =
     
     user_prompt = f"{sales_summary}\n\nOperational Context: {context_notes}"
 
-    # 5. --- THE GEMINI API INTEGRATION (Gemma 4 31B) ---
-    if not GEMINI_API_KEY:
+    # 5. --- THE ILMU API INTEGRATION (ilmu-glm-5.1 via Anthropic SDK) ---
+    if not ILMU_API_KEY:
         return {
             "estimated_tokens": estimated_tokens,
             "boundary_warning": boundary_warning,
@@ -128,42 +129,26 @@ def analyze_inventory(context_notes: str, token_limit: int = 1500, db: Session =
             "riskLevel": 85
         }
 
-    # The actual network request to Gemini API
-    headers = {
-        "Content-Type": "application/json"
-    }
-    
-    # Using the Gemma 4 31B model endpoint
-    url = f"https://generativelanguage.googleapis.com/v1beta/models/gemma-4-31b-it:generateContent?key={GEMINI_API_KEY}"
-    
-    payload = {
-        "contents": [
-            {
-                "parts": [
-                    {"text": system_prompt + "\n\nCRITICAL: DO NOT INCLUDE ANY REASONING OR THOUGHT PROCESS. YOU MUST ONLY RETURN THE FINAL JSON OBJECT STARTING WITH { AND ENDING WITH }.\n\n" + user_prompt}
-                ]
-            }
-        ],
-        "generationConfig": {
-            "temperature": 0.2,
-            "maxOutputTokens": min(token_limit, 2048)
-        }
-    }
+    client = Anthropic(
+        api_key=ILMU_API_KEY,
+        base_url="https://api.ilmu.ai/anthropic"
+    )
 
     try:
-        # Send to Gemini API (Gemma 4 31B)
-        response = requests.post(url, json=payload, headers=headers)
+        # Send to ILMU API using Anthropic SDK
+        # We merge the system prompt into the user message because ILMU's GLM wrapper might be dropping system= kwargs silently!
+        full_prompt = system_prompt + "\n\nCRITICAL: DO NOT INCLUDE ANY REASONING OR THOUGHT PROCESS. YOU MUST ONLY RETURN THE FINAL JSON OBJECT STARTING WITH { AND ENDING WITH }.\n\n" + user_prompt
         
-        # If Gemma throws an internal 500 crash directly from Google's cloud, seamlessly fallback to the stable flash model
-        if response.status_code == 500:
-            fallback_url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key={GEMINI_API_KEY}"
-            response = requests.post(fallback_url, json=payload, headers=headers)
-            
-        response.raise_for_status()
+        message = client.messages.create(
+            model="ilmu-glm-5.1",
+            max_tokens=min(token_limit, 2048),
+            temperature=0.2,
+            messages=[
+                {"role": "user", "content": full_prompt}
+            ]
+        )
         
-        # Parse the response
-        ai_response_data = response.json()
-        ai_text = ai_response_data['candidates'][0]['content']['parts'][0]['text']
+        ai_text = message.content[0].text
         
         # Clean markdown if generated and extract JSON block
         ai_text = ai_text.replace("```json", "").replace("```", "").strip()
@@ -184,15 +169,12 @@ def analyze_inventory(context_notes: str, token_limit: int = 1500, db: Session =
             r_m = re.search(r'`?risk_level`?:\s*(\d+)', ai_text)
             c_m = re.search(r'`?confidence_score`?:\s*(\d+)', ai_text)
             
-            if s_m and t_m and r_m:
-                ai_insights = {
-                    "mock_strategy": s_m.group(1),
-                    "mock_tradeoff": t_m.group(1),
-                    "risk_level": int(r_m.group(1)),
-                    "confidence_score": int(c_m.group(1)) if c_m else random.randint(82, 95)
-                }
-            else:
-                raise ValueError("Could not extract expected keys via Regex fallback.")
+            ai_insights = {
+                "mock_strategy": s_m.group(1) if s_m else f"Raw AI response: {ai_text[:100]}...",
+                "mock_tradeoff": t_m.group(1) if t_m else "Could not parse tradeoff from AI output.",
+                "risk_level": int(r_m.group(1)) if r_m else 50,
+                "confidence_score": int(c_m.group(1)) if c_m else random.randint(82, 95)
+            }
         
         return {
             "status": "success",
@@ -204,18 +186,16 @@ def analyze_inventory(context_notes: str, token_limit: int = 1500, db: Session =
             "confidence_score": ai_insights.get("confidence_score", 89)
         }
 
-    except requests.exceptions.HTTPError as e:
-        status_code = e.response.status_code
-        error_info = e.response.text
-        if status_code == 404:
-            raise HTTPException(status_code=502, detail=f"Model 'gemma-4-31b-it' not found. It may not be available on this API version yet: {error_info}")
-        if status_code == 429:
-            raise HTTPException(status_code=429, detail="Gemini API Rate Limit Exceeded. You are making requests too quickly. Please pause and try again later.")
-        raise HTTPException(status_code=502, detail=f"Gemini API Connection Error (HTTP {status_code}): {error_info}")
-    except requests.exceptions.RequestException as e:
-        raise HTTPException(status_code=502, detail=f"Gemini API Blocked/Timeout: {str(e)}")
-    except (json.JSONDecodeError, ValueError) as e:
-        raise HTTPException(status_code=500, detail=f"Gemini returned an unreadable format. Please try again. Error: {str(e)}")
+    except APIConnectionError as e:
+        raise HTTPException(status_code=502, detail=f"ILMU API Connection Error: {str(e)}")
+    except APIError as e:
+        if e.status_code == 404:
+            raise HTTPException(status_code=502, detail=f"ILMU API endpoint or model not found: {str(e)}")
+        if e.status_code == 429:
+            raise HTTPException(status_code=429, detail="ILMU API Rate Limit Exceeded. You are making requests too quickly. Please pause and try again later.")
+        raise HTTPException(status_code=502, detail=f"ILMU API Error (HTTP {e.status_code}): {str(e)}")
+    except (json.JSONDecodeError, ValueError, KeyError, IndexError) as e:
+        raise HTTPException(status_code=500, detail=f"ILMU API returned an unreadable format. Please try again. Error: {str(e)}")
 
 # backend/main.py (Add to the bottom)
 

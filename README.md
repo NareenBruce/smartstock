@@ -4,7 +4,7 @@ SmartStock is a full-stack web application featuring a React frontend and a Fast
 
 ## 🎥 Pitching Video
 
-> **Watch our pitching video here:** [**Link to Pitching Video**](INSERT_YOUR_VIDEO_LINK_HERE) *(Please replace this link with your actual Google Drive or cloud storage link)*
+> **Watch our pitching video here:** [**Link to Pitching Video**](https://youtu.be/BVZv0TeSN0Y?si=AXrt8vWMW0OTBryL)
 
 ## Prerequisites
 

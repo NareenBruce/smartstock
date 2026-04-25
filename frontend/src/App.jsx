@@ -60,7 +60,7 @@ function App() {
       // 2. Upload the CSV to SQLite first
       const formData = new FormData()
       formData.append('file', file)
-      await axios.post('http://localhost:8000/api/v1/upload-sales', formData, {
+      await axios.post('https://smartstockbend.nareenbruce.tech/api/v1/upload-sales', formData, {
         headers: { 'Content-Type': 'multipart/form-data' }
       })
       // -------------------------------------
@@ -68,7 +68,7 @@ function App() {
       // 3. Ask the AI to reason about the newly uploaded data
       const enhancedContext = `Optimization Goal: ${optGoal}. AI Risk Tolerance: ${riskTolerance}/100. ${contextNote}. Expected foot traffic drop: ${trafficDrop}%.`
       const analyzeResponse = await axios.post(
-        `http://localhost:8000/api/v1/analyze-inventory?context_notes=${encodeURIComponent(enhancedContext)}&token_limit=${tokenLimit}`
+        `https://smartstockbend.nareenbruce.tech/api/v1/analyze-inventory?context_notes=${encodeURIComponent(enhancedContext)}&token_limit=${tokenLimit}`
       )
 
       const data = analyzeResponse.data
@@ -121,7 +121,7 @@ function App() {
           onClick={async () => {
             setActiveTab('trends')
             try {
-              const response = await axios.get('http://localhost:8000/api/v1/trends')
+              const response = await axios.get('https://smartstockbend.nareenbruce.tech/api/v1/trends')
               if (response.data.length > 0) {
                 setTrendData(response.data)
               }
